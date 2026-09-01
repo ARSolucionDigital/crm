@@ -338,12 +338,12 @@ def normalize_linkedin_url(raw_url):
 
 def detect_profile_scenario(page):
     """
-    Inspect the loaded profile page with maximum granularity and classify into:
-    - 'DM': 1st degree connection (Direct Message link / 1st badge)
-    - 'INMAIL': Sales Navigator InMail button available
-    - 'CONNECT': Connect button / custom invite link available (with note)
-    - 'PENDING': Invitation already pending
-    - 'ERROR': Profile not found / 404 / Authwall
+    Inspect profile page with strategic hierarchy:
+    1. 1st Degree -> 'DM' (Free direct chat)
+    2. 2nd/3rd Degree with Connect available -> 'CONNECT' (Free connection request with note)
+    3. 2nd/3rd Degree ALREADY in Pending -> 'INMAIL' (Escalates to Sales Nav InMail)
+    4. Closed profile with InMail -> 'INMAIL'
+    5. Error / Authwall -> 'ERROR'
     """
     page.wait_for_timeout(3000)
     
@@ -354,51 +354,54 @@ def detect_profile_scenario(page):
     if page.locator("text='Esta página no existe'").count() > 0 or page.locator("text='Page not found'").count() > 0:
         return "ERROR", None
 
-    # 2. Check 1st Degree Connection (Badge or Direct Message <a> link)
-    # LinkedIn renders the main profile direct message button as:
-    # <a href="/messaging/compose/?profileUrn=...&interop=msgOverlay">Message</a>
-    direct_msg_link = page.locator("main a[href*='/messaging/compose'], div.ph5 a[href*='/messaging/compose'], a.artdeco-button--primary:has-text('Message'), a.artdeco-button--primary:has-text('Mensaje')")
-    degree_badge = page.locator("span:has-text('1st'), span:has-text('1.º'), .dist-value:has-text('1')")
+    # 2. Check 1st Degree Connection (Strictly in profile top card)
+    top_card = page.locator("main section").first
+    top_badges = top_card.locator("span.dist-value, span:has-text('1st'), span:has-text('1.º')").all_text_contents()
+    is_1st_degree = any(('1st' in b or '1.º' in b) for b in top_badges if b.strip())
     
-    if direct_msg_link.count() > 0 and direct_msg_link.first.is_visible():
-        return "DM", direct_msg_link.first
-    elif degree_badge.count() > 0:
-        # If badge says 1st degree, find any message button or link
-        msg_any = page.locator("a[href*='/messaging/compose'], button:has-text('Mensaje'), button:has-text('Message')")
-        if msg_any.count() > 0:
-            return "DM", msg_any.first
+    if is_1st_degree:
+        direct_msg_link = top_card.locator("a[href*='/messaging/compose'], a:has-text('Message'), a:has-text('Mensaje'), button:has-text('Message'), button:has-text('Mensaje')")
+        if direct_msg_link.count() > 0:
+            return "DM", direct_msg_link.first
 
-    # 3. Check for Pending invitation
-    pending_loc = page.locator("main button:has-text('Pendiente'), main button:has-text('Pending')")
-    if pending_loc.count() > 0 and pending_loc.first.is_visible():
-        return "PENDING", pending_loc.first
-
-    # 4. Check for Connect button / invite link
+    # 3. For 2nd/3rd Degree: Prioritize FREE Connection Request with Note
+    # Check if Connect is in the main card
     connect_btn = page.locator("main button:has-text('Conectar'), main button:has-text('Connect'), main a[href*='/preload/custom-invite/']")
     if connect_btn.count() > 0 and connect_btn.first.is_visible():
         return "CONNECT", connect_btn.first
 
-    # 5. Check inside 'More' / 'Más' dropdown for Connect
-    more_btn = page.locator("main button:has-text('Más'), main button:has-text('More'), main button[aria-label*='Más acciones']")
+    # Check inside 'More' / 'Más' dropdown for Connect or Pending
+    has_pending = False
+    more_btn = page.locator("main button[aria-label*='More'], main button[aria-label*='Más'], main button:has-text('More'), main button:has-text('Más')")
     if more_btn.count() > 0 and more_btn.first.is_visible():
         try:
             more_btn.first.click()
             page.wait_for_timeout(800)
-            connect_in_more = page.locator("div[role='button']:has-text('Conectar'), div[role='button']:has-text('Connect'), button:has-text('Conectar')")
+            
+            # Check for Connect in menu
+            connect_in_more = page.locator("div[role='button']:has-text('Connect'), div[role='button']:has-text('Conectar'), [role='menuitem']:has-text('Connect'), [role='menuitem']:has-text('Conectar'), button:has-text('Conectar'), button:has-text('Connect')")
             if connect_in_more.count() > 0 and connect_in_more.first.is_visible():
                 return "CONNECT", connect_in_more.first
+                
+            # Check for Pending in menu
+            pending_in_more = page.locator("div[role='button']:has-text('Pending'), div[role='button']:has-text('Pendiente'), [role='menuitem']:has-text('Pending'), [role='menuitem']:has-text('Pendiente')")
+            if pending_in_more.count() > 0:
+                has_pending = True
         except Exception:
             pass
 
-    # 6. Check for InMail button (Sales Nav or Premium) for 2nd/3rd degree
-    inmail_loc = page.locator("button:has-text('InMail'), button[aria-label*='InMail'], button[data-control-name='inmail']")
-    if inmail_loc.count() > 0 and inmail_loc.first.is_visible():
-        return "INMAIL", inmail_loc.first
+    # Check main card for Pending
+    pending_loc = page.locator("main button:has-text('Pendiente'), main button:has-text('Pending')")
+    if pending_loc.count() > 0 and pending_loc.first.is_visible():
+        has_pending = True
 
-    # Fallback to Sales Nav button if available
-    sales_nav_btn = page.locator("a:has-text('Ver en Sales Navigator'), a:has-text('View in Sales Navigator')")
-    if sales_nav_btn.count() > 0 and sales_nav_btn.first.is_visible():
+    # 4. If Already Pending OR Closed to Connect -> Escalate to InMail (Sales Navigator)
+    sales_nav_btn = page.locator("a:has-text('Ver en Sales Navigator'), a:has-text('View in Sales Navigator'), a[href*='/sales/'], button[data-control-name='inmail'], button:has-text('InMail')")
+    if sales_nav_btn.count() > 0:
         return "INMAIL", sales_nav_btn.first
+
+    if has_pending:
+        return "PENDING", None
 
     return "CONNECT", None
 
