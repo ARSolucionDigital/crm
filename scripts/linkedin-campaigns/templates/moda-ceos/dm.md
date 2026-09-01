@@ -1,0 +1,1 @@
+Hola {{nameFirstName}}, te mandé un email sobre cómo blindar el margen de marketing en moda evitando vender prendas agotadas. Si tiene sentido ver en 10 minutos cómo protegemos el margen de scaleups de vuestro volumen sin cambiar de ERP, dímelo y te paso un enlace.

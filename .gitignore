@@ -55,3 +55,12 @@ TRANSLATION_QA_REPORT.md
 .playwright-mcp/
 .playwright-cli/
 output/playwright/
+
+# Automation scripts, sessions, logs, and secrets
+.chrome-session/
+**/.chrome-session/
+**/session.json
+**/.venv/
+**/.env.campaign
+**/.env.linkedin
+**/.ngrok.pid

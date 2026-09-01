@@ -1,0 +1,1 @@
+Hola {{nameFirstName}}, te mandé un correo sobre el problema de tomar decisiones con datos de hace 30 días en empresas de vuestro tamaño. ¿En {{companyName}} tenéis los números y departamentos consolidados en tiempo real o dependéis de cruces manuales a fin de mes?

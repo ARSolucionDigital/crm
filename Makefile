@@ -74,3 +74,19 @@ tunnel: ## Start ngrok tunnel (auto-configures SERVER_URL)
 
 tunnel-stop: ## Stop ngrok tunnel and restore localhost
 	bash $(SCRIPTS_DIR)/tunnel-stop.sh
+
+campaign-preview: ## Preview email campaign (e.g. make campaign-preview TEMPLATE=operaciones-intro)
+	python3 scripts/email-campaigns/send-campaign.py --template $(or $(TEMPLATE),operaciones-intro) --dry-run
+
+campaign-send: ## Send email campaign (e.g. make campaign-send TEMPLATE=operaciones-intro LIMIT=30)
+	python3 scripts/email-campaigns/send-campaign.py --template $(or $(TEMPLATE),operaciones-intro) --limit $(or $(LIMIT),30)
+
+# LinkedIn & Sales Navigator Automation Targets
+linkedin-login: ## Login and save LinkedIn/Sales Nav persistent session
+	scripts/linkedin-campaigns/.venv/bin/python3 scripts/linkedin-campaigns/send-linkedin.py --login
+
+linkedin-preview: ## Preview LinkedIn campaign (e.g. make linkedin-preview TEMPLATE=moda-operaciones)
+	scripts/linkedin-campaigns/.venv/bin/python3 scripts/linkedin-campaigns/send-linkedin.py --template $(or $(TEMPLATE),moda-operaciones) --dry-run
+
+linkedin-send: ## Send LinkedIn campaign (e.g. make linkedin-send TEMPLATE=moda-operaciones LIMIT=20)
+	scripts/linkedin-campaigns/.venv/bin/python3 scripts/linkedin-campaigns/send-linkedin.py --template $(or $(TEMPLATE),moda-operaciones) --limit $(or $(LIMIT),20)

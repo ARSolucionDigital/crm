@@ -1,0 +1,1 @@
+Hola {{nameFirstName}}, te mandé un correo sobre cómo modernizar la operativa de transporte sin tirar vuestro software central de 15 años. ¿Vuestra tecnología actual os permite competir dando datos en tiempo real contra los grandes o el software antiguo os frena?

@@ -1,0 +1,1 @@
+Hola {{nameFirstName}}, te escribí un correo breve sobre cómo eliminar las llamadas diarias de "¿dónde está mi paquete?". ¿En {{companyName}} vuestros operadores aún tienen que perseguir transportistas por WhatsApp o tenéis la trazabilidad automatizada de extremo a extremo?
