@@ -308,11 +308,11 @@ def launch_stealth_browser(playwright_instance, config, headless=False):
 
 def human_type(element, text):
     """Simulate realistic human typing with variable inter-key delays."""
-    element.focus()
+    element.click()
     for char in text:
-        element.type(char, delay=random.randint(35, 95))
+        element.type(char, delay=random.randint(35, 85))
         if char in [".", ",", "!", "?", "\n"]:
-            time.sleep(random.uniform(0.15, 0.45))
+            time.sleep(random.uniform(0.12, 0.30))
 
 def close_chat_overlays(page):
     """Close or minimize any open floating chat bubbles from previous leads."""
@@ -720,15 +720,22 @@ def main():
                         if action_btn:
                             close_chat_overlays(page)
                             action_btn.click()
-                            page.wait_for_timeout(2000)
-                            chat_box = page.locator("div.msg-form__contenteditable, div[role='textbox'], div[contenteditable='true']").last
-                            if chat_box.is_visible():
-                                human_type(chat_box, body_rendered)
+                            page.wait_for_timeout(2500)
+                            
+                            chat_boxes = page.locator("div.msg-form__contenteditable, div[role='textbox'], div[contenteditable='true']")
+                            if chat_boxes.count() > 0:
+                                target_box = chat_boxes.last
+                                target_box.click()
+                                page.wait_for_timeout(500)
+                                human_type(target_box, body_rendered)
                                 page.wait_for_timeout(1000)
-                                send_btn = page.locator("button.msg-form__send-button, button:has-text('Send'), button:has-text('Enviar')").last
-                                if send_btn.is_visible():
-                                    send_btn.click()
-                                    page.wait_for_timeout(2500)
+                                
+                                send_buttons = page.locator("button.msg-form__send-button, button[type='submit']:has-text('Send'), button:has-text('Enviar')")
+                                if send_buttons.count() > 0:
+                                    target_send = send_buttons.last
+                                    if not target_send.is_disabled():
+                                        target_send.click()
+                                        page.wait_for_timeout(3000)
                             close_chat_overlays(page)
                         action_type = "linkedin.dm_sent"
 
