@@ -450,9 +450,25 @@ def test_single_url(config, campaign_name, url, dry_run=True):
         page.goto(clean_url, wait_until="domcontentloaded", timeout=35000)
         page.wait_for_timeout(4000)
 
-        # Check if title has full name
+        # Extract name dynamically from page title / H1 (e.g. "Silvia Juliana | LinkedIn" -> "Silvia")
         page_title = page.title()
         print(f"📄 Título de la página: {page_title}")
+
+        extracted_first_name = ""
+        if "|" in page_title:
+            full_title_name = page_title.split("|")[0].strip()
+            name_parts = full_title_name.split()
+            if name_parts:
+                extracted_first_name = name_parts[0]
+
+        sample_lead = {
+            "nameFirstName": extracted_first_name,
+            "nameLastName": "",
+            "companyName": "tu empresa",
+            "jobTitle": "Directiva",
+            "city": "España",
+            "linkedinLinkPrimaryLinkUrl": clean_url
+        }
 
         scenario, action_btn = detect_profile_scenario(page)
         print(f"🎯 Escenario detectado: {scenario}")
