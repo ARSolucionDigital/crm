@@ -314,6 +314,17 @@ def human_type(element, text):
         if char in [".", ",", "!", "?", "\n"]:
             time.sleep(random.uniform(0.15, 0.45))
 
+def close_chat_overlays(page):
+    """Close or minimize any open floating chat bubbles from previous leads."""
+    try:
+        close_btns = page.locator("aside.msg-overlay-container button[data-control-name='overlay.close_conversation_window'], aside.msg-overlay-container button[aria-label*='Close conversation'], aside.msg-overlay-container button[aria-label*='Cerrar'], button:has(svg[data-test-icon='close-small'])")
+        for i in range(close_btns.count()):
+            if close_btns.nth(i).is_visible():
+                close_btns.nth(i).click()
+                page.wait_for_timeout(250)
+    except Exception:
+        pass
+
 def normalize_linkedin_url(raw_url):
     """Ensure URL is clean, unquoted, and starts with https."""
     if not raw_url:
@@ -707,16 +718,18 @@ def main():
                     # Execute actual send
                     if scenario == "DM":
                         if action_btn:
+                            close_chat_overlays(page)
                             action_btn.click()
-                            page.wait_for_timeout(1500)
-                            chat_box = page.locator("div[role='textbox'], div.msg-form__contenteditable")
-                            if chat_box.count() > 0:
-                                human_type(chat_box.first, body_rendered)
+                            page.wait_for_timeout(2000)
+                            chat_box = page.locator("div.msg-form__contenteditable, div[role='textbox'], div[contenteditable='true']").last
+                            if chat_box.is_visible():
+                                human_type(chat_box, body_rendered)
                                 page.wait_for_timeout(1000)
-                                send_btn = page.locator("button.msg-form__send-button, button:has-text('Enviar')")
-                                if send_btn.count() > 0:
-                                    send_btn.first.click()
-                                    page.wait_for_timeout(2000)
+                                send_btn = page.locator("button.msg-form__send-button, button:has-text('Send'), button:has-text('Enviar')").last
+                                if send_btn.is_visible():
+                                    send_btn.click()
+                                    page.wait_for_timeout(2500)
+                            close_chat_overlays(page)
                         action_type = "linkedin.dm_sent"
 
                     elif scenario == "INMAIL":
