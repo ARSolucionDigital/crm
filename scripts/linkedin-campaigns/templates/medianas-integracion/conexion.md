@@ -1,1 +1,1 @@
-Hola {{nameFirstName}}, te escribí un correo sobre integración de flujos de datos en {{companyName}}. Me gustaría conectar por aquí para estar en contacto a nivel directivo.
+Hola {{nameFirstName}}, sigo a {{companyName}}. Como ex-Dozen (+50M€ transaccionados), ¿vuestro BI financiero os da la verdad al instante o vuestro equipo aún tiene que conciliar informes a mano a fin de mes?

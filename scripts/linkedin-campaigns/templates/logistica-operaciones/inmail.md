@@ -1,4 +1,4 @@
 ---
-subject: 40 llamadas al día preguntando por la carga
+subject: 40 llamadas al día en {{companyName}}
 ---
-Hola {{nameFirstName}}, en logística la mitad del equipo suele estar atada al teléfono respondiendo llamadas de clientes y la otra persiguiendo transportistas por WhatsApp. Diseñé la arquitectura de plataformas que mueven millones automatizando la trazabilidad en tiempo real sin descolgar un teléfono. ¿En {{companyName}} tenéis la trazabilidad resuelta o seguís dependiendo de llamadas manuales?
+Hola {{nameFirstName}}, tener a medio equipo de operaciones atado al teléfono respondiendo «dónde está mi pedido» o persiguiendo transportistas por WhatsApp es tiempo tirado a la basura. Automatizo la trazabilidad de paquetes en milisegundos para que cliente y almacén vean lo mismo sin descolgar el teléfono. ¿Seguís con procesos manuales en {{companyName}} o lo tenéis 100% automatizado?

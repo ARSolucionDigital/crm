@@ -1,4 +1,4 @@
 ---
-subject: perder clientes por no dar datos en tiempo real
+subject: clientes perdidos en {{companyName}}
 ---
-Hola {{nameFirstName}}, los clientes grandes de transporte ya no solo compran kilómetros, compran visibilidad en tiempo real. Desacoplamos los sistemas de empresas de transporte leyendo los eventos de sus bases de datos antiguas para dar dashboards modernos en semanas sin parar la empresa. ¿Vuestro software actual os permite competir contra los grandes?
+Hola {{nameFirstName}}, un cliente de logística ya no solo compra transporte; compra visibilidad en tiempo real. Cuando perdéis una cuenta grande, suele ser porque el competidor ofrece trazabilidad instantánea y vuestro ERP antiguo tarda horas en consolidar. Hackeamos vuestros sistemas legacy para dar datos al segundo sin cambiar de software. ¿Os está frenando vuestro sistema antiguo en {{companyName}}?

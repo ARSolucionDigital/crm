@@ -1,1 +1,1 @@
-Hola {{nameFirstName}}, te mandé un email sobre cómo blindar el margen de marketing en moda evitando vender prendas agotadas. Si tiene sentido ver en 10 minutos cómo protegemos el margen de scaleups de vuestro volumen sin cambiar de ERP, dímelo y te paso un enlace.
+Hola {{nameFirstName}}, te envié una nota muy corta al correo sobre cómo en {{companyName}} se puede estar quemando margen de marketing vendiendo prendas agotadas por desfase de stock. ¿Tienes 10 minutos esta semana para ver cómo protegemos vuestra facturación sin cambiar de ERP?

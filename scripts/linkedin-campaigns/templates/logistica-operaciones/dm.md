@@ -1,1 +1,1 @@
-Hola {{nameFirstName}}, te escribí un correo breve sobre cómo eliminar las llamadas diarias de "¿dónde está mi paquete?". ¿En {{companyName}} vuestros operadores aún tienen que perseguir transportistas por WhatsApp o tenéis la trazabilidad automatizada de extremo a extremo?
+Hola {{nameFirstName}}, te escribí al mail sobre el caos de perseguir transportistas por WhatsApp y responder llamadas de clientes en {{companyName}}. ¿Seguís persiguiendo estados de envío a mano o vuestro sistema ya da trazabilidad automatizada de extremo a extremo?

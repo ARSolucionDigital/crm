@@ -1,1 +1,1 @@
-Hola {{nameFirstName}}, te mandé un correo sobre el problema de tomar decisiones con datos de hace 30 días en empresas de vuestro tamaño. ¿En {{companyName}} tenéis los números y departamentos consolidados en tiempo real o dependéis de cruces manuales a fin de mes?
+Hola {{nameFirstName}}, te dejé una nota rápida en el correo sobre el dolor de tomar decisiones en {{companyName}} con datos financieros que llevan un mes de retraso por culpa de Excels manuales. ¿Sincronizáis balances al segundo o vuestro equipo aún concilia a mano a final de mes?

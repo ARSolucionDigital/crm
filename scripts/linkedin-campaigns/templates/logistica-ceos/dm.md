@@ -1,1 +1,1 @@
-Hola {{nameFirstName}}, te mandé un correo sobre cómo modernizar la operativa de transporte sin tirar vuestro software central de 15 años. ¿Vuestra tecnología actual os permite competir dando datos en tiempo real contra los grandes o el software antiguo os frena?
+Hola {{nameFirstName}}, te envié un correo sobre cómo el software antiguo de {{companyName}} puede estar frenando vuestro crecimiento frente a competidores más digitalizados. ¿Te encaja una charla de 10 minutos para ver cómo dar datos en tiempo real sin cambiar de ERP?

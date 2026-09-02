@@ -1,4 +1,4 @@
 ---
 subject: cruzar Excels los lunes en {{companyName}}
 ---
-Hola {{nameFirstName}}, sé que en operaciones de moda las mañanas de los lunes suelen ser un infierno cuadrando ventas del fin de semana con el ERP para no vender stock fantasma. En operadores de gran volumen eliminamos ese trabajo manual y 400.000 €/año en roturas sincronizando el catálogo en tiempo real. ¿En {{companyName}} tenéis este proceso 100% automatizado o seguís dependiendo de conciliaciones manuales?
+Hola {{nameFirstName}}, sé que las mañanas de los lunes en moda son un dolor cuadrando ventas del fin de semana con el almacén para no vender prendas agotadas. En un operador logístico eliminamos ese trabajo manual y 400.000 €/año en roturas sincronizando el stock en tiempo real por eventos. ¿Tenéis este proceso automatizado en {{companyName}} o seguís dependiendo de conciliaciones manuales?
