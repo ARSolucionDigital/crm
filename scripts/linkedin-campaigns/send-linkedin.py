@@ -338,11 +338,11 @@ def normalize_linkedin_url(raw_url):
 
 def detect_profile_scenario(page):
     """
-    Inspect profile page with strategic hierarchy:
-    1. 1st Degree -> 'DM' (Free direct chat)
-    2. 2nd/3rd Degree with Connect available -> 'CONNECT' (Free connection request with note)
-    3. 2nd/3rd Degree ALREADY in Pending -> 'INMAIL' (Escalates to Sales Nav InMail)
-    4. Closed profile with InMail -> 'INMAIL'
+    Inspect profile page with strategic InMail priority:
+    1. 1st Degree Connection -> 'DM' (Free direct chat via dm.md)
+    2. Non-Connection (2nd/3rd Degree) -> 'INMAIL' (Prioritized InMail via inmail.md using Sales Nav credits)
+    3. Fallback (If InMail restricted) -> 'CONNECT' (Connection request with note via conexion.md)
+    4. Pending without InMail -> 'PENDING'
     5. Error / Authwall -> 'ERROR'
     """
     page.wait_for_timeout(3000)
@@ -364,43 +364,47 @@ def detect_profile_scenario(page):
         if direct_msg_link.count() > 0:
             return "DM", direct_msg_link.first
 
-    # 3. For 2nd/3rd Degree: Prioritize FREE Connection Request with Note
-    # Check if Connect is in the main card
-    connect_btn = page.locator("main button:has-text('Conectar'), main button:has-text('Connect'), main a[href*='/preload/custom-invite/']")
-    if connect_btn.count() > 0 and connect_btn.first.is_visible():
-        return "CONNECT", connect_btn.first
+    # 3. For 2nd/3rd Degree: Prioritize INMAIL (Using available InMail credits)
+    # Check for direct InMail / Sales Nav buttons in top card
+    inmail_direct = top_card.locator("button:has-text('InMail'), button[data-control-name='inmail'], button[aria-label*='InMail'], a:has-text('View in Sales Navigator'), a:has-text('Ver en Sales Navigator'), a[href*='/sales/']")
+    if inmail_direct.count() > 0 and inmail_direct.first.is_visible():
+        return "INMAIL", inmail_direct.first
 
-    # Check inside 'More' / 'Más' dropdown for Connect or Pending
-    has_pending = False
+    # Check the primary action Message link on non-connection (which opens InMail compose)
+    non_conn_msg = top_card.locator("a[href*='/messaging/compose'], a.artdeco-button--primary:has-text('Message'), a.artdeco-button--primary:has-text('Mensaje')")
+    if non_conn_msg.count() > 0 and non_conn_msg.first.is_visible():
+        return "INMAIL", non_conn_msg.first
+
+    # Check inside 'More' / 'Más' dropdown for InMail / Sales Navigator
     more_btn = page.locator("main button[aria-label*='More'], main button[aria-label*='Más'], main button:has-text('More'), main button:has-text('Más')")
     if more_btn.count() > 0 and more_btn.first.is_visible():
         try:
             more_btn.first.click()
             page.wait_for_timeout(800)
             
-            # Check for Connect in menu
-            connect_in_more = page.locator("div[role='button']:has-text('Connect'), div[role='button']:has-text('Conectar'), [role='menuitem']:has-text('Connect'), [role='menuitem']:has-text('Conectar'), button:has-text('Conectar'), button:has-text('Connect')")
-            if connect_in_more.count() > 0 and connect_in_more.first.is_visible():
-                return "CONNECT", connect_in_more.first
-                
-            # Check for Pending in menu
-            pending_in_more = page.locator("div[role='button']:has-text('Pending'), div[role='button']:has-text('Pendiente'), [role='menuitem']:has-text('Pending'), [role='menuitem']:has-text('Pendiente')")
-            if pending_in_more.count() > 0:
-                has_pending = True
+            inmail_in_more = page.locator("div[role='button']:has-text('Sales Navigator'), div[role='button']:has-text('InMail'), [role='menuitem']:has-text('Sales Navigator'), [role='menuitem']:has-text('InMail'), a:has-text('Sales Navigator')")
+            if inmail_in_more.count() > 0 and inmail_in_more.first.is_visible():
+                return "INMAIL", inmail_in_more.first
         except Exception:
             pass
 
-    # Check main card for Pending
-    pending_loc = page.locator("main button:has-text('Pendiente'), main button:has-text('Pending')")
-    if pending_loc.count() > 0 and pending_loc.first.is_visible():
-        has_pending = True
+    # 4. Fallback: Check if Connect is available if InMail is not possible
+    connect_btn = page.locator("main button:has-text('Conectar'), main button:has-text('Connect'), main a[href*='/preload/custom-invite/']")
+    if connect_btn.count() > 0 and connect_btn.first.is_visible():
+        return "CONNECT", connect_btn.first
 
-    # 4. If Already Pending OR Closed to Connect -> Escalate to InMail (Sales Navigator)
-    sales_nav_btn = page.locator("a:has-text('Ver en Sales Navigator'), a:has-text('View in Sales Navigator'), a[href*='/sales/'], button[data-control-name='inmail'], button:has-text('InMail')")
-    if sales_nav_btn.count() > 0:
-        return "INMAIL", sales_nav_btn.first
+    # Check inside 'More' dropdown for Connect
+    if more_btn.count() > 0 and more_btn.first.is_visible():
+        try:
+            connect_in_more = page.locator("div[role='button']:has-text('Connect'), div[role='button']:has-text('Conectar'), [role='menuitem']:has-text('Connect'), [role='menuitem']:has-text('Conectar'), button:has-text('Conectar'), button:has-text('Connect')")
+            if connect_in_more.count() > 0 and connect_in_more.first.is_visible():
+                return "CONNECT", connect_in_more.first
+        except Exception:
+            pass
 
-    if has_pending:
+    # 5. Check if already Pending
+    pending_loc = page.locator("main button:has-text('Pendiente'), main button:has-text('Pending'), div[role='button']:has-text('Pending'), [role='menuitem']:has-text('Pending')")
+    if pending_loc.count() > 0:
         return "PENDING", None
 
     return "CONNECT", None
@@ -531,28 +535,36 @@ def test_single_url(config, campaign_name, url, dry_run=True):
 
             elif scenario == "INMAIL":
                 if action_btn:
+                    close_chat_overlays(page)
                     print("   👉 Abriendo ventana de InMail...")
                     action_btn.click()
                     page.wait_for_timeout(2500)
                     
-                    subject_input = page.locator("input[name='subject'], input[placeholder*='Asunto'], input[placeholder*='Subject']")
-                    if subject_input.count() > 0 and subject_rendered:
+                    subject_inputs = page.locator("input[name='subject'], input[placeholder*='Asunto'], input[placeholder*='Subject'], input.msg-form__subject")
+                    if subject_inputs.count() > 0 and subject_rendered:
                         print(f"   ⌨️  Escribiendo asunto: {subject_rendered}")
-                        human_type(subject_input.first, subject_rendered)
+                        target_subject = subject_inputs.last
+                        target_subject.click()
+                        human_type(target_subject, subject_rendered)
                         page.wait_for_timeout(800)
                         
-                    body_input = page.locator("div.msg-form__contenteditable, div[role='textbox'], textarea[name='message']")
-                    if body_input.count() > 0:
+                    body_inputs = page.locator("div.msg-form__contenteditable, div[role='textbox'], div[contenteditable='true'], textarea[name='message']")
+                    if body_inputs.count() > 0:
                         print(f"   ⌨️  Escribiendo cuerpo de InMail...")
-                        human_type(body_input.first, body_rendered)
+                        target_body = body_inputs.last
+                        target_body.click()
+                        human_type(target_body, body_rendered)
                         page.wait_for_timeout(1000)
                         
-                        send_inmail_btn = page.locator("button:has-text('Enviar InMail'), button:has-text('Send InMail'), button.msg-form__send-button")
-                        if send_inmail_btn.count() > 0:
-                            print("   📤 Enviando InMail...")
-                            send_inmail_btn.first.click()
-                            page.wait_for_timeout(3000)
-                            print("   ✅ ¡InMail enviado con éxito!")
+                        send_inmail_btns = page.locator("button.msg-form__send-button, button:has-text('Send InMail'), button:has-text('Enviar InMail'), button:has-text('Send'), button:has-text('Enviar')")
+                        if send_inmail_btns.count() > 0:
+                            target_send = send_inmail_btns.last
+                            if not target_send.is_disabled():
+                                print("   📤 Enviando InMail...")
+                                target_send.click()
+                                page.wait_for_timeout(3000)
+                                print("   ✅ ¡InMail enviado con éxito!")
+                    close_chat_overlays(page)
 
             elif scenario == "CONNECT":
                 if action_btn:
@@ -744,20 +756,31 @@ def main():
 
                     elif scenario == "INMAIL":
                         if action_btn:
+                            close_chat_overlays(page)
                             action_btn.click()
-                            page.wait_for_timeout(2000)
-                            subject_input = page.locator("input[name='subject'], input[placeholder*='Asunto'], input[placeholder*='Subject']")
-                            if subject_input.count() > 0 and subject_rendered:
-                                human_type(subject_input.first, subject_rendered)
+                            page.wait_for_timeout(2500)
+                            
+                            subject_inputs = page.locator("input[name='subject'], input[placeholder*='Asunto'], input[placeholder*='Subject'], input.msg-form__subject")
+                            if subject_inputs.count() > 0 and subject_rendered:
+                                target_subject = subject_inputs.last
+                                target_subject.click()
+                                human_type(target_subject, subject_rendered)
                                 page.wait_for_timeout(800)
-                            body_input = page.locator("div[role='textbox'], textarea[name='message'], div.msg-form__contenteditable")
-                            if body_input.count() > 0:
-                                human_type(body_input.first, body_rendered)
+                                
+                            body_inputs = page.locator("div.msg-form__contenteditable, div[role='textbox'], div[contenteditable='true'], textarea[name='message']")
+                            if body_inputs.count() > 0:
+                                target_body = body_inputs.last
+                                target_body.click()
+                                human_type(target_body, body_rendered)
                                 page.wait_for_timeout(1000)
-                                send_inmail_btn = page.locator("button:has-text('Enviar InMail'), button:has-text('Send InMail'), button.msg-form__send-button")
-                                if send_inmail_btn.count() > 0:
-                                    send_inmail_btn.first.click()
-                                    page.wait_for_timeout(2000)
+                                
+                                send_inmail_btns = page.locator("button.msg-form__send-button, button:has-text('Send InMail'), button:has-text('Enviar InMail'), button:has-text('Send'), button:has-text('Enviar')")
+                                if send_inmail_btns.count() > 0:
+                                    target_send = send_inmail_btns.last
+                                    if not target_send.is_disabled():
+                                        target_send.click()
+                                        page.wait_for_timeout(3000)
+                            close_chat_overlays(page)
                         action_type = "linkedin.inmail_sent"
 
                     elif scenario == "CONNECT":
