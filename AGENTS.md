@@ -107,6 +107,12 @@ npx nx storybook:test twenty-front
 | `twenty-cli` | CLI tool |
 | `create-twenty-app` | App scaffolding |
 | `twenty-e2e-testing` | Playwright E2E tests |
+| `twenty-utils` | Utility scripts |
+| `twenty-docs` | Documentation |
+| `twenty-companion` | Companion application |
+| `twenty-zapier` | Zapier integration |
+| `twenty-claude-skills` | Claude AI skills |
+| `twenty-docker` | Docker configurations |
 
 ## Environment
 
@@ -114,3 +120,50 @@ npx nx storybook:test twenty-front
 - `.env` files copied from `.env.example` via `npx nx reset:env <package>`
 - Postgres on `localhost:5432`, Redis on `localhost:6379`
 - MCP servers: Postgres (read-only), Playwright, Context7
+
+## Testing
+
+### Unit Tests
+```bash
+npx nx test twenty-front
+npx nx test twenty-server
+```
+
+### E2E Tests
+```bash
+npx nx run twenty-e2e-testing:test
+```
+
+### Storybook Tests
+```bash
+npx nx storybook:test twenty-front
+```
+
+## Deployment
+
+### Production Builds
+```bash
+npx nx build twenty-front --configuration=production
+npx nx build twenty-server --configuration=production
+```
+
+### Docker
+```bash
+docker build -f packages/twenty-docker/Dockerfile -t twenty .
+```
+
+## CI/CD
+
+The project uses Nx for managing the monorepo and follows standard CI/CD practices:
+- Linting and type checking on all commits
+- Unit tests run on pull requests
+- Integration tests run on main branch
+- Storybook deployment on release
+- Automated dependency updates through Dependabot
+
+## Performance Optimization
+
+- Code splitting and lazy loading in frontend
+- Caching strategies for API responses
+- Database query optimization
+- Background job processing with BullMQ

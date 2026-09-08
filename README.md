@@ -37,13 +37,11 @@ The fastest way to get started. Sign up at [twenty.com](https://twenty.com) and 
 ### <img src="./packages/twenty-website-new/public/images/readme/book-icon.svg" width="14" height="14"/> Build an app
 
 Scaffold a new app with the Twenty CLI:
-
 ```bash
 npx create-twenty-app my-app
 ```
 
 Define objects, fields, and views as code:
-
 ```ts
 import { defineObject, FieldType } from 'twenty-sdk/define';
 
@@ -61,7 +59,6 @@ export default defineObject({
 ```
 
 Then ship it to your workspace:
-
 ```bash
 npx twenty deploy
 ```
@@ -147,7 +144,64 @@ Want to go deeper? Read the <a href="https://docs.twenty.com/user-guide/introduc
 - <a href="https://nestjs.com/"><img src="./packages/twenty-website-new/public/images/readme/stack-nestjs.svg" width="14" height="14"/> NestJS</a>, with <a href="https://bullmq.io/">BullMQ</a>, <a href="https://www.postgresql.org/"><img src="./packages/twenty-website-new/public/images/readme/stack-postgresql.svg" width="14" height="14"/> PostgreSQL</a>, <a href="https://redis.io/"><img src="./packages/twenty-website-new/public/images/readme/stack-redis.svg" width="14" height="14"/> Redis</a>
 - <a href="https://reactjs.org/"><img src="./packages/twenty-website-new/public/images/readme/stack-react.svg" width="14" height="14"/> React</a>, with <a href="https://jotai.org/">Jotai</a>, <a href="https://linaria.dev/">Linaria</a> and <a href="https://lingui.dev/">Lingui</a>
 
+# Project Structure
 
+This is a monorepo using Nx workspace with the following packages:
+- `twenty-front` - React frontend application
+- `twenty-server` - NestJS backend API server
+- `twenty-ui` - Shared UI component library
+- `twenty-shared` - Common types and utilities
+- `twenty-sdk` - Server SDK for building apps
+- `twenty-client-sdk` - Client SDK for apps
+- `twenty-cli` - Command-line interface
+- `create-twenty-app` - Application scaffolding tool
+- `twenty-docs` - Documentation
+- `twenty-e2e-testing` - End-to-end tests
+- `twenty-utils` - Utility scripts
+
+# Development Setup
+
+## Prerequisites
+- Node.js v24.5.0+
+- Yarn v4.0.2+
+
+## Quick Start
+
+1. Install dependencies:
+```bash
+yarn install
+```
+
+2. Set up environment:
+```bash
+npx nx reset:env twenty-front
+npx nx reset:env twenty-server
+```
+
+3. Start development servers:
+```bash
+yarn start
+```
+
+## Available Scripts
+```bash
+yarn start                    # Start everything (front + server + worker)
+npx nx start twenty-front     # Frontend dev server -> localhost:3001
+npx nx start twenty-server    # Backend -> localhost:3000
+npx nx run twenty-server:worker # Background worker (BullMQ)
+```
+
+## Build Process
+```bash
+npx nx build twenty-shared    # Build shared packages first
+npx nx build twenty-ui        # Depends on twenty-shared
+npx nx build twenty-front     # Depends on twenty-shared, twenty-ui
+npx nx build twenty-server    # Depends on twenty-shared
+```
+
+# Contributing
+
+Please read our [contributing guidelines](https://docs.twenty.com/developers/contribute/introduction) for details on our code of conduct and the process for submitting pull requests.
 
 # Thanks
 
@@ -161,8 +215,7 @@ Want to go deeper? Read the <a href="https://docs.twenty.com/user-guide/introduc
   <a href="https://crowdin.com/"><img src="./packages/twenty-website-new/public/images/readme/crowdin.webp" height="28" alt="Crowdin" /></a>
 </p>
 
-  Thanks to these amazing services that we use and recommend for UI testing (Chromatic), code review (Greptile), catching bugs (Sentry) and translating (Crowdin).
-
+Thanks to these amazing services that we use and recommend for UI testing (Chromatic), code review (Greptile), catching bugs (Sentry) and translating (Crowdin).
 
 # Join the Community
 
