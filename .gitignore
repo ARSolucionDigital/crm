@@ -64,3 +64,13 @@ output/playwright/
 **/.env.campaign
 **/.env.linkedin
 **/.ngrok.pid
+
+# Production and customer data
+infra/**/.env
+infra/**/.env.*
+!infra/**/.env.example
+docs/BBDD-Leads/
+docs/leads/*.csv
+packages/twenty-docker/.env.bak
+scripts/import-*.sql
+**/session.json

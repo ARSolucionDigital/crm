@@ -141,6 +141,31 @@ npx nx storybook:test twenty-front
 
 ## Deployment
 
+### Production Server
+- **URL:** https://crm.arsoluciondigital.com
+- **Server:** Hetzner `root@2.29.38.181` (SSH key: `~/.ssh/crm_hetzner`)
+- **Stack:** Docker Compose (server, worker, Postgres 16, Redis)
+- **SSL:** Let's Encrypt auto-renewal
+
+### Deploy (from local machine)
+```bash
+# Dispatch the reviewed main branch through GitHub Actions (requires gh auth)
+bash scripts/deploy.sh twenty
+# BookStack is an independent, manual workflow
+bash scripts/deploy.sh bookstack
+```
+
+The workflow builds an image identified by the Git SHA, publishes it, creates a
+backup, deploys over SSH, checks health, and records rollback state. The local
+script never stages files, creates commits, or pushes the current worktree.
+
+### Server-side deploy script
+```bash
+# Managed scripts installed without restarting services
+ssh -i ~/.ssh/crm_hetzner root@2.29.38.181 "ls -la /opt/twenty-crm/managed/production"
+ssh -i ~/.ssh/crm_hetzner root@2.29.38.181 "ls -la /opt/twenty-crm/managed/bookstack"
+```
+
 ### Production Builds
 ```bash
 npx nx build twenty-front --configuration=production
@@ -149,8 +174,45 @@ npx nx build twenty-server --configuration=production
 
 ### Docker
 ```bash
-docker build -f packages/twenty-docker/Dockerfile -t twenty .
+docker build -f packages/twenty-docker/twenty/Dockerfile --target twenty -t twenty-local:dev .
 ```
+
+## Server Management
+
+### Quick SSH
+```bash
+ssh -i ~/.ssh/crm_hetzner root@2.29.38.181
+```
+
+### Containers
+```bash
+ssh -i ~/.ssh/crm_hetzner root@2.29.38.181 "cd /opt/twenty-crm && docker compose ps"
+ssh -i ~/.ssh/crm_hetzner root@2.29.38.181 "cd /opt/twenty-crm && docker compose logs --tail=50 server"
+ssh -i ~/.ssh/crm_hetzner root@2.29.38.181 "cd /opt/twenty-crm && docker compose restart server worker"
+```
+
+### Backups
+```bash
+# Server backups (auto daily at 2AM, keeps 7 daily + 4 weekly)
+ssh -i ~/.ssh/crm_hetzner root@2.29.38.181 "ls -lh /opt/twenty-crm/backups/"
+
+# Download latest backup to local ~/Desktop/twenty-backups/
+bash scripts/download-backup.sh
+```
+
+### Database (on server)
+```bash
+# Direct psql on server
+ssh -i ~/.ssh/crm_hetzner root@2.29.38.181 "docker compose -f /opt/twenty-crm/docker-compose.yml exec -T db psql -U postgres -d default"
+```
+
+## Security
+
+- **SSH:** Key-only auth, fail2ban active, root login via key only
+- **Nginx:** Security headers, rate limiting (API: 10r/s, Auth: 5r/m), server_tokens off
+- **Docker:** Port 3000 bound to localhost only, resource limits per container
+- **Auto-updates:** unattended-upgrades enabled for security patches
+- **Firewall:** UFW (22, 80, 443 only)
 
 ## CI/CD
 
