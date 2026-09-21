@@ -37,7 +37,10 @@ jobs:
           target: twenty
           push: true
           tags: ${{ env.IMAGE_NAME }}:${{ steps.meta.outputs.image_tag }}
-          build-args: APP_VERSION=${{ github.sha }}
+          # Twenty validates APP_VERSION as SemVer at runtime. Keep the commit
+          # traceable while using a valid prerelease version instead of the raw
+          # 40-character SHA.
+          build-args: APP_VERSION=0.0.0-${{ github.sha }}
 
   deploy:
     needs: build
