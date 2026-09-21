@@ -1,0 +1,82 @@
+name: Deploy Twenty image
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+  packages: write
+
+concurrency:
+  group: production-twenty
+  cancel-in-progress: false
+
+env:
+  IMAGE_NAME: ghcr.io/arsoluciondigital/crm
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    outputs:
+      image_tag: ${{ steps.meta.outputs.image_tag }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: meta
+        run: echo "image_tag=${GITHUB_SHA}" >> "$GITHUB_OUTPUT"
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: packages/twenty-docker/twenty/Dockerfile
+          target: twenty
+          push: true
+          tags: ${{ env.IMAGE_NAME }}:${{ steps.meta.outputs.image_tag }}
+          build-args: APP_VERSION=${{ github.sha }}
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install managed deployment files
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.PRODUCTION_SSH_KEY }}
+          SSH_KNOWN_HOSTS: ${{ secrets.PRODUCTION_KNOWN_HOSTS }}
+          PRODUCTION_HOST: ${{ secrets.PRODUCTION_HOST }}
+          PRODUCTION_USER: ${{ secrets.PRODUCTION_USER }}
+        run: |
+          set -Eeuo pipefail
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$SSH_PRIVATE_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          printf '%s\n' "$SSH_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          ssh_opts=(-i ~/.ssh/deploy_key -o BatchMode=yes)
+          ssh "${ssh_opts[@]}" "$PRODUCTION_USER@$PRODUCTION_HOST" 'mkdir -p /opt/twenty-crm/managed/production'
+          scp "${ssh_opts[@]}" infra/production/twenty.compose.yml infra/production/backup-twenty.sh infra/production/deploy-twenty.sh infra/production/rollback-twenty.sh "$PRODUCTION_USER@$PRODUCTION_HOST:/opt/twenty-crm/managed/production/"
+          ssh "${ssh_opts[@]}" "$PRODUCTION_USER@$PRODUCTION_HOST" 'chmod 700 /opt/twenty-crm/managed/production/*.sh'
+      - name: Deploy exact Git SHA
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.PRODUCTION_SSH_KEY }}
+          SSH_KNOWN_HOSTS: ${{ secrets.PRODUCTION_KNOWN_HOSTS }}
+          PRODUCTION_HOST: ${{ secrets.PRODUCTION_HOST }}
+          PRODUCTION_USER: ${{ secrets.PRODUCTION_USER }}
+          REGISTRY_USERNAME: ${{ secrets.PRODUCTION_REGISTRY_USERNAME }}
+          REGISTRY_TOKEN: ${{ secrets.PRODUCTION_REGISTRY_TOKEN }}
+          IMAGE_TAG: ${{ needs.build.outputs.image_tag }}
+        run: |
+          set -Eeuo pipefail
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$SSH_PRIVATE_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          printf '%s\n' "$SSH_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          printf '%s' "$REGISTRY_TOKEN" | ssh -i ~/.ssh/deploy_key -o BatchMode=yes "$PRODUCTION_USER@$PRODUCTION_HOST" \
+            "docker login ghcr.io --username '$REGISTRY_USERNAME' --password-stdin"
+          ssh -i ~/.ssh/deploy_key -o BatchMode=yes "$PRODUCTION_USER@$PRODUCTION_HOST" \
+            "export IMAGE_REPOSITORY='$IMAGE_NAME'; /opt/twenty-crm/managed/production/deploy-twenty.sh '$IMAGE_TAG'"

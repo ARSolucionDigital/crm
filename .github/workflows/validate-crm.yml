@@ -1,0 +1,71 @@
+name: Validate CRM changes
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: validate-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  repository-safety:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Reject credentials and real lead exports
+        shell: bash
+        run: |
+          set -euo pipefail
+          if git ls-files 'docs/BBDD-Leads/**' 'docs/leads/*.csv' | grep -q .; then
+            echo 'Real lead exports under docs/leads or docs/BBDD-Leads are tracked.' >&2
+            exit 1
+          fi
+          if git ls-files | grep -E '(^|/)(\.env$|\.env\.(campaign|linkedin)$|session\.json$)' >/dev/null; then
+            echo 'A runtime secret or browser session is tracked.' >&2
+            exit 1
+          fi
+          if grep -RIl --exclude-dir=.git --include='*.yml' --include='*.yaml' --include='*.sh' -E '(APP_KEY|APP_SECRET|DB_PASSWORD|SMTP_PASSWORD)(=|:)[[:space:]]*(base64:)?[A-Za-z0-9+/]{32,}' infra scripts 2>/dev/null; then
+            echo 'A probable credential was found in a tracked operational file.' >&2
+            exit 1
+          fi
+
+  docker-config:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-compose-action@v1
+      - name: Validate sanitized Compose files
+        run: |
+          docker compose --env-file infra/production/twenty.env.example -f infra/production/twenty.compose.yml config >/dev/null
+          docker compose --env-file infra/bookstack/bookstack.env.example -f infra/bookstack/bookstack.compose.yml config >/dev/null
+
+  code-quality:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: yarn
+      - run: corepack enable && yarn install --immutable
+      - run: npx nx lint:diff-with-main twenty-front
+      - run: npx nx lint:diff-with-main twenty-server
+      - run: npx nx typecheck twenty-front
+      - run: npx nx typecheck twenty-server
+
+  unit-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: yarn
+      - run: corepack enable && yarn install --immutable
+      - run: npx nx test twenty-front --ci
+      - run: npx nx test twenty-server --ci

@@ -1,0 +1,30 @@
+name: twenty-local
+
+services:
+  server:
+    build:
+      context: ../..
+      dockerfile: packages/twenty-docker/twenty/Dockerfile
+      target: twenty
+      args:
+        APP_VERSION: 0.0.0-local
+    image: twenty-local:dev
+    ports:
+      - "127.0.0.1:${TWENTY_PORT:-3001}:3000"
+
+  worker:
+    build:
+      context: ../..
+      dockerfile: packages/twenty-docker/twenty/Dockerfile
+      target: twenty
+      args:
+        APP_VERSION: 0.0.0-local
+    image: twenty-local:dev
+
+  db:
+    ports:
+      - "127.0.0.1:${PG_PORT:-55432}:5432"
+
+  redis:
+    ports:
+      - "127.0.0.1:${REDIS_PORT:-56379}:6379"
