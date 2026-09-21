@@ -1,0 +1,1 @@
+Hola {{nameFirstName}}, te escribí al mail sobre el caos de perseguir transportistas por WhatsApp y responder llamadas de clientes en {{companyName}}. ¿Seguís persiguiendo estados de envío a mano o vuestro sistema ya da trazabilidad automatizada de extremo a extremo?

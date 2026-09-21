@@ -1,0 +1,1 @@
+Hola {{nameFirstName}}, te dejé una nota rápida en el correo sobre el dolor de tomar decisiones en {{companyName}} con datos financieros que llevan un mes de retraso por culpa de Excels manuales. ¿Sincronizáis balances al segundo o vuestro equipo aún concilia a mano a final de mes?

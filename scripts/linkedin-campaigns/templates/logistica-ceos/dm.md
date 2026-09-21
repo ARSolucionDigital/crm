@@ -1,0 +1,1 @@
+Hola {{nameFirstName}}, te envié un correo sobre cómo el software antiguo de {{companyName}} puede estar frenando vuestro crecimiento frente a competidores más digitalizados. ¿Te encaja una charla de 10 minutos para ver cómo dar datos en tiempo real sin cambiar de ERP?

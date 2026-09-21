@@ -1,0 +1,1 @@
+Hola {{nameFirstName}}, sigo a {{companyName}}. Diseñé sistemas transaccionales que gestionan +50M€/año. ¿Tenéis el stock sincronizado en tiempo real o vuestra web aún vende prendas que no hay en almacén?

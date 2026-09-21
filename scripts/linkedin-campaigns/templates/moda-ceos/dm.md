@@ -1,0 +1,1 @@
+Hola {{nameFirstName}}, te envié una nota muy corta al correo sobre cómo en {{companyName}} se puede estar quemando margen de marketing vendiendo prendas agotadas por desfase de stock. ¿Tienes 10 minutos esta semana para ver cómo protegemos vuestra facturación sin cambiar de ERP?

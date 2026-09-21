@@ -1,0 +1,1 @@
+Hola {{nameFirstName}}, sigo a {{companyName}}. Como ex-Dozen (+50M€ transaccionados), ¿vuestro BI financiero os da la verdad al instante o vuestro equipo aún tiene que conciliar informes a mano a fin de mes?

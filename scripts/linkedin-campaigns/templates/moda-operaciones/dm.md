@@ -1,0 +1,1 @@
+Hola {{nameFirstName}}, te dejé un correo rápido sobre el infierno de cruzar Excels a mano en {{companyName}} para no vender stock fantasma. No quiero que se pierda en spam: ¿en {{companyName}} seguís conciliando inventarios a mano los lunes o vuestra web y el ERP se hablan en milisegundos?
