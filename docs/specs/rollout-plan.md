@@ -9,11 +9,14 @@
   creados; los CSV de leads y `.env.bak` se conservan localmente pero ya no
   están en el índice de Git.
 - **Fase 2:** workflows y scripts instalados en
-  `/opt/twenty-crm/managed/`; falta configurar los secretos del entorno
-  `production` en GitHub y ejecutar el primer build/push de imagen propia.
-- **Fase 3:** Compose y workflow de BookStack están implementados; falta el
-  primer lanzamiento aprobado del workflow para validar la ruta de actualización
-  end-to-end. Los servicios actuales no se reiniciaron durante esta transición.
+  `/opt/twenty-crm/managed/`; el baseline de Twenty quedó desplegado con su
+  digest capturado y los backups fueron verificados. Falta configurar los
+  secretos del entorno `production` en GitHub y ejecutar el primer build/push de
+  imagen propia en GHCR.
+- **Fase 3:** Compose y workflow de BookStack están implementados; BookStack y
+  MariaDB ya fueron recreados con referencias fijadas, backup previo y health
+  check satisfactorio. Falta ejecutar el primer lanzamiento desde GitHub para
+  validar la misma ruta end-to-end con aprobación del entorno.
 - **Pendiente de coordinación:** purgar los CSV y secretos del historial Git
   remoto mediante una reescritura acordada; retirarlos del índice evita nuevas
   exposiciones, pero no modifica el historial existente.
