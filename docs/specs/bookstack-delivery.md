@@ -35,7 +35,7 @@ usan valores vacíos o marcadores y documentan el significado de cada variable.
 
 La imagen se fija a una versión concreta de BookStack, no a `latest`.
 Ejemplo: `lscr.io/linuxserver/bookstack:<version>`. Cada actualización se hace
-en una PR `ops/bookstack-upgrade-<version>` que declara versión anterior,
+en una PR `codex/bookstack-upgrade-<version>` que declara versión anterior,
 versión objetivo, cambios relevantes y plan de rollback.
 
 El deploy se lanza mediante workflow manual con aprobación `production`. El

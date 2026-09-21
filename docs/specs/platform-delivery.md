@@ -45,7 +45,7 @@ scripts/
   linkedin-campaigns/               # Automatización opcional; no se despliega
   leads-import/                     # Código de importación sin datos reales
 .github/workflows/
-  validate.yml
+  validate-crm.yml
   deploy-twenty.yml
   deploy-bookstack.yml
 ```
@@ -63,11 +63,11 @@ sesiones de navegador, credenciales ni CSV de clientes.
 Las ramas de trabajo se crean desde `main` y se integran mediante pull request:
 
 ```text
-feat/email-campaigns
-feat/linkedin-campaigns
-feat/leads-import
-ops/production-baseline
-ops/bookstack
+codex/email-campaigns
+codex/linkedin-campaigns
+codex/leads-import
+codex/production-baseline
+codex/bookstack
 ```
 
 Las campañas de email y LinkedIn se mantienen separadas porque tienen riesgos,

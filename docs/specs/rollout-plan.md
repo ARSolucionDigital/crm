@@ -38,7 +38,7 @@ Salida: una línea base recuperable, sin cambios de aplicación.
 
 ## Fase 1 — Saneamiento de Git
 
-1. Crear `ops/production-baseline` desde la referencia estable elegida.
+1. Crear `codex/production-baseline` desde la referencia estable elegida.
 2. Mover la definición no secreta de Compose y scripts a `infra/`.
 3. Reemplazar el script local que hace staging automático por comandos seguros
    que solo consulten o desplieguen un SHA explícito.
@@ -51,7 +51,7 @@ aislados.
 ## Fase 2 — Artefactos y CI
 
 1. Crear la imagen de Twenty desde el monorepo y publicarla con SHA inmutable.
-2. Añadir `validate.yml` y validar su ejecución en una PR de prueba.
+2. Añadir `validate-crm.yml` y validar su ejecución en una PR de prueba.
 3. Configurar secretos de CI: clave SSH de despliegue, registro de imágenes y
    host; no usar secretos del runtime de la aplicación.
 4. Ejecutar el primer deploy en modo aprobación manual y conservar el tag
