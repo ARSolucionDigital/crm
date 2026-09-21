@@ -31,7 +31,7 @@ services:
           memory: 256M
 
   bookstack-db:
-    image: ${MARIADB_IMAGE:-mariadb:10.11}
+    image: ${MARIADB_IMAGE:?MARIADB_IMAGE must be pinned to a version or digest}
     container_name: bookstack-db
     environment:
       MARIADB_ROOT_PASSWORD: ${MARIADB_ROOT_PASSWORD:?MARIADB_ROOT_PASSWORD is required}
