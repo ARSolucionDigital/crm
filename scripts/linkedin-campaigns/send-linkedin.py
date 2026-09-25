@@ -16,6 +16,7 @@ import re
 import subprocess
 import sys
 import time
+import unicodedata
 import urllib.parse
 from pathlib import Path
 from playwright.sync_api import sync_playwright
@@ -306,9 +307,9 @@ def launch_stealth_browser(playwright_instance, config, headless=False):
 
     return browser_context
 
-def human_type(element, text):
+def human_type(element, text, force_click=False):
     """Simulate realistic human typing with variable inter-key delays."""
-    element.click()
+    element.click(force=force_click)
     for char in text:
         element.type(char, delay=random.randint(35, 85))
         if char in [".", ",", "!", "?", "\n"]:
@@ -366,14 +367,18 @@ def detect_profile_scenario(page):
 
     # 3. For 2nd/3rd Degree: Prioritize INMAIL (Using available InMail credits)
     # Check for direct InMail / Sales Nav buttons in top card
-    inmail_direct = top_card.locator("button:has-text('InMail'), button[data-control-name='inmail'], button[aria-label*='InMail'], a:has-text('View in Sales Navigator'), a:has-text('Ver en Sales Navigator'), a[href*='/sales/']")
+    inmail_direct = top_card.locator(
+        "button:has-text('InMail'), button[data-control-name='inmail'], "
+        "button[aria-label*='InMail'], button[title*='InMail'], "
+        "a[aria-label*='InMail'], a[title*='InMail']"
+    )
     if inmail_direct.count() > 0 and inmail_direct.first.is_visible():
         return "INMAIL", inmail_direct.first
 
-    # Check the primary action Message link on non-connection (which opens InMail compose)
-    non_conn_msg = top_card.locator("a[href*='/messaging/compose'], a.artdeco-button--primary:has-text('Message'), a.artdeco-button--primary:has-text('Mensaje')")
-    if non_conn_msg.count() > 0 and non_conn_msg.first.is_visible():
-        return "INMAIL", non_conn_msg.first
+    # LinkedIn's non-connection Message action opens the InMail composer.
+    message_compose_link = top_card.locator("a[href*='/messaging/compose']")
+    if message_compose_link.count() > 0 and message_compose_link.first.is_visible():
+        return "INMAIL", message_compose_link.first
 
     # Check inside 'More' / 'Más' dropdown for InMail / Sales Navigator
     more_btn = page.locator("main button[aria-label*='More'], main button[aria-label*='Más'], main button:has-text('More'), main button:has-text('Más')")
@@ -382,23 +387,23 @@ def detect_profile_scenario(page):
             more_btn.first.click()
             page.wait_for_timeout(800)
             
-            inmail_in_more = page.locator("div[role='button']:has-text('Sales Navigator'), div[role='button']:has-text('InMail'), [role='menuitem']:has-text('Sales Navigator'), [role='menuitem']:has-text('InMail'), a:has-text('Sales Navigator')")
+            inmail_in_more = page.locator("div[role='button']:has-text('InMail'), [role='menuitem']:has-text('InMail')")
             if inmail_in_more.count() > 0 and inmail_in_more.first.is_visible():
                 return "INMAIL", inmail_in_more.first
         except Exception:
             pass
 
-    # 4. Fallback: Check if Connect is available if InMail is not possible
+    # 4. Connection requests are intentionally disabled for this campaign.
     connect_btn = page.locator("main button:has-text('Conectar'), main button:has-text('Connect'), main a[href*='/preload/custom-invite/']")
     if connect_btn.count() > 0 and connect_btn.first.is_visible():
-        return "CONNECT", connect_btn.first
+        return "INMAIL", None
 
     # Check inside 'More' dropdown for Connect
     if more_btn.count() > 0 and more_btn.first.is_visible():
         try:
             connect_in_more = page.locator("div[role='button']:has-text('Connect'), div[role='button']:has-text('Conectar'), [role='menuitem']:has-text('Connect'), [role='menuitem']:has-text('Conectar'), button:has-text('Conectar'), button:has-text('Connect')")
             if connect_in_more.count() > 0 and connect_in_more.first.is_visible():
-                return "CONNECT", connect_in_more.first
+                return "INMAIL", None
         except Exception:
             pass
 
@@ -407,7 +412,9 @@ def detect_profile_scenario(page):
     if pending_loc.count() > 0:
         return "PENDING", None
 
-    return "CONNECT", None
+    # Never send a connection request when the profile is not a first-degree
+    # contact unless LinkedIn explicitly exposed a usable InMail action.
+    return "INMAIL", None
 
 def execute_login_setup(config):
     """Interactive mode to open browser, log into LinkedIn/Sales Navigator and save state."""
@@ -441,6 +448,121 @@ def execute_login_setup(config):
             
         context.close()
         print("✅ ¡Sesión guardada y verificada permanentemente!\n")
+
+def confirm_inmail_sent(page, body_input):
+    """Confirm that LinkedIn closed the compose form or displayed a send notice."""
+    page.wait_for_timeout(3000)
+    confirmation_text = " ".join(
+        page.locator(
+            "[role='alert'], .artdeco-toast-item, "
+            ".msg-form__sent-message, .msg-s-message-list__event"
+        ).all_text_contents()
+    ).lower()
+    page_text = page.locator("body").inner_text().lower()
+    if any(
+        token in confirmation_text
+        for token in [
+            "sent",
+            "enviado",
+            "enviada",
+            "message sent",
+            "message was sent",
+            "your message",
+            "mensaje enviado",
+        ]
+    ):
+        return True
+    if "awaiting reply from" in page_text and "new inmail" in page_text:
+        return True
+    if not body_input.is_visible():
+        return True
+    subject_inputs = page.locator(
+        "input[aria-label='Subject (required)']:visible, "
+        "input[aria-label='Asunto (obligatorio)']:visible"
+    )
+    return subject_inputs.count() == 0
+
+def normalize_search_text(value):
+    """Normalize names for matching CRM values against LinkedIn labels."""
+    return "".join(
+        character for character in unicodedata.normalize("NFKD", value.lower())
+        if not unicodedata.combining(character)
+    )
+
+def open_sales_navigator_inmail(page, lead):
+    """Open the real InMail composer from the matching Sales Navigator lead."""
+    lead_name = " ".join(
+        value for value in [
+            (lead.get("nameFirstName") or "").strip(),
+            (lead.get("nameLastName") or "").strip(),
+        ] if value
+    )
+    if not lead_name:
+        raise RuntimeError("El lead no tiene nombre para buscarlo en Sales Navigator.")
+
+    normalized_lead_name = normalize_search_text(lead_name)
+    matching_link = None
+    search_queries = [lead_name]
+    profile_slug = urllib.parse.urlparse(
+        normalize_linkedin_url(lead.get("linkedinLinkPrimaryLinkUrl", ""))
+    ).path.strip("/").split("/")[-1]
+    if profile_slug:
+        search_queries.append(profile_slug)
+
+    for search_query in search_queries:
+        search_url = (
+            "https://www.linkedin.com/sales/search/people?keywords="
+            + urllib.parse.quote(search_query)
+        )
+        page.goto(search_url, wait_until="domcontentloaded", timeout=35000)
+        page.wait_for_timeout(5000)
+        result_links = page.locator("a[data-lead-search-result^='profile-link-']")
+        for index in range(result_links.count()):
+            candidate = result_links.nth(index)
+            candidate_name = normalize_search_text(candidate.inner_text().strip())
+            candidate_href = normalize_search_text(candidate.get_attribute("href") or "")
+            compact_candidate_name = candidate_name.replace(" ", "")
+            if (
+                candidate_name == normalized_lead_name
+                or (profile_slug and profile_slug in candidate_href)
+                or (profile_slug and compact_candidate_name in profile_slug)
+            ):
+                matching_link = candidate
+                break
+        if matching_link is not None:
+            break
+
+        # CRM names can be abbreviated or omit middle names; use the strongest
+        # token match only after exact and profile-slug matches fail.
+        lead_tokens = {
+            token for token in normalized_lead_name.split() if len(token) > 1
+        }
+        best_match = None
+        best_score = 1
+        for index in range(result_links.count()):
+            candidate = result_links.nth(index)
+            candidate_tokens = set(normalize_search_text(candidate.inner_text()).split())
+            score = len(lead_tokens & candidate_tokens)
+            if score > best_score:
+                best_score = score
+                best_match = candidate
+        if best_match is not None and best_score >= 2:
+            matching_link = best_match
+            break
+    if matching_link is None:
+        raise RuntimeError(f"No se encontró '{lead_name}' en Sales Navigator.")
+
+    matching_link.click()
+    inmail_button = page.locator("[data-anchor-send-inmail]:visible").last
+    try:
+        inmail_button.wait_for(state="visible", timeout=10000)
+    except Exception as error:
+        raise RuntimeError(
+            f"La ficha de '{lead_name}' no ofrece un botón InMail en Sales Navigator."
+        ) from error
+
+    inmail_button.click()
+    page.wait_for_timeout(1500)
 
 def test_single_url(config, campaign_name, url, dry_run=True):
     """Test classification and rendering on a single arbitrary LinkedIn URL."""
@@ -553,7 +675,7 @@ def test_single_url(config, campaign_name, url, dry_run=True):
                         print(f"   ⌨️  Escribiendo cuerpo de InMail...")
                         target_body = body_inputs.last
                         target_body.click()
-                        human_type(target_body, body_rendered)
+                        human_type(target_body, body_rendered, force_click=True)
                         page.wait_for_timeout(1000)
                         
                         send_inmail_btns = page.locator("button.msg-form__send-button, button:has-text('Send InMail'), button:has-text('Enviar InMail'), button:has-text('Send'), button:has-text('Enviar')")
@@ -714,6 +836,11 @@ def main():
                     results.append({"personId": lead["id"], "name": lead_name, "status": "SKIPPED", "scenario": "PENDING"})
                     continue
 
+                if scenario in {"NO_INMAIL", "CONNECT"}:
+                    print("   ⚠️ No hay InMail utilizable; no se enviará una solicitud de conexión.")
+                    results.append({"personId": lead["id"], "name": lead_name, "status": "SKIPPED", "scenario": scenario})
+                    continue
+
                 # Select modality
                 modality = "dm" if scenario == "DM" else ("inmail" if scenario == "INMAIL" else "conexion")
                 subject_raw, body_raw = parse_template(args.template, modality)
@@ -755,57 +882,76 @@ def main():
                         action_type = "linkedin.dm_sent"
 
                     elif scenario == "INMAIL":
-                        if action_btn:
-                            close_chat_overlays(page)
-                            action_btn.click()
-                            page.wait_for_timeout(2500)
-                            
-                            subject_inputs = page.locator("input[name='subject'], input[placeholder*='Asunto'], input[placeholder*='Subject'], input.msg-form__subject")
-                            if subject_inputs.count() > 0 and subject_rendered:
-                                target_subject = subject_inputs.last
-                                target_subject.click()
-                                human_type(target_subject, subject_rendered)
-                                page.wait_for_timeout(800)
-                                
-                            body_inputs = page.locator("div.msg-form__contenteditable, div[role='textbox'], div[contenteditable='true'], textarea[name='message']")
-                            if body_inputs.count() > 0:
-                                target_body = body_inputs.last
-                                target_body.click()
-                                human_type(target_body, body_rendered)
-                                page.wait_for_timeout(1000)
-                                
-                                send_inmail_btns = page.locator("button.msg-form__send-button, button:has-text('Send InMail'), button:has-text('Enviar InMail'), button:has-text('Send'), button:has-text('Enviar')")
-                                if send_inmail_btns.count() > 0:
-                                    target_send = send_inmail_btns.last
-                                    if not target_send.is_disabled():
-                                        target_send.click()
-                                        page.wait_for_timeout(3000)
-                            close_chat_overlays(page)
+                        close_chat_overlays(page)
+                        open_sales_navigator_inmail(page, lead)
+
+                        subject_inputs = page.locator(
+                            "input[name='subject']:visible, "
+                            "input[aria-label='Subject (required)']:visible, "
+                            "input[aria-label='Asunto (obligatorio)']:visible, "
+                            "input[placeholder*='Asunto']:visible, "
+                            "input[placeholder*='Subject']:visible, "
+                            "input.msg-form__subject:visible"
+                        )
+                        if not subject_rendered:
+                            raise RuntimeError("La plantilla de InMail no contiene asunto.")
+                        try:
+                            subject_inputs.first.wait_for(state="visible", timeout=10000)
+                        except Exception as error:
+                            raise RuntimeError(
+                                "No se abrió el formulario de InMail o falta el asunto."
+                            ) from error
+                        if subject_inputs.count() == 0:
+                            raise RuntimeError("No se abrió el formulario de InMail o falta el asunto.")
+                        target_subject = subject_inputs.last
+                        target_subject.click()
+                        human_type(target_subject, subject_rendered)
+                        page.wait_for_timeout(800)
+
+                        body_inputs = page.locator(
+                            "textarea[name='message']:visible, "
+                            "textarea[id^='compose-form-text-']:visible, "
+                            "div.msg-form__contenteditable:visible, "
+                            "div[role='textbox']:visible, "
+                            "div[contenteditable='true']:visible"
+                        )
+                        try:
+                            body_inputs.first.wait_for(state="visible", timeout=10000)
+                        except Exception as error:
+                            raise RuntimeError(
+                                "No se encontró el cuerpo del formulario de InMail."
+                            ) from error
+                        if body_inputs.count() == 0:
+                            raise RuntimeError("No se encontró el cuerpo del formulario de InMail.")
+                        target_body = body_inputs.last
+                        human_type(target_body, body_rendered, force_click=True)
+                        page.wait_for_timeout(1000)
+
+                        send_inmail_btns = page.locator(
+                            "button.msg-form__send-button, "
+                            "button:has-text('Send InMail'), "
+                            "button:has-text('Enviar InMail'), "
+                            "button:visible"
+                        )
+                        enabled_send_button = None
+                        for _ in range(20):
+                            for index in range(send_inmail_btns.count()):
+                                candidate = send_inmail_btns.nth(index)
+                                if candidate.inner_text().strip() in {"Send", "Enviar", "Send InMail", "Enviar InMail"} and not candidate.is_disabled():
+                                    enabled_send_button = candidate
+                            if enabled_send_button is not None:
+                                break
+                            page.wait_for_timeout(500)
+                        if enabled_send_button is None:
+                            raise RuntimeError("No se encontró el botón de envío de InMail.")
+                        enabled_send_button.click()
+                        if not confirm_inmail_sent(page, target_body):
+                            raise RuntimeError("LinkedIn no confirmó el envío del InMail.")
+                        close_chat_overlays(page)
                         action_type = "linkedin.inmail_sent"
 
                     elif scenario == "CONNECT":
-                        if action_btn:
-                            action_btn.click()
-                            page.wait_for_timeout(1500)
-                            add_note_btn = page.locator("button:has-text('Añadir una nota'), button:has-text('Add a note')")
-                            if add_note_btn.count() > 0 and add_note_btn.first.is_visible():
-                                add_note_btn.first.click()
-                                page.wait_for_timeout(1000)
-                                note_box = page.locator("textarea[name='message'], textarea#custom-message")
-                                if note_box.count() > 0:
-                                    human_type(note_box.first, body_rendered[:300])
-                                    page.wait_for_timeout(1000)
-                                    send_conn_btn = page.locator("button:has-text('Enviar'), button:has-text('Send')")
-                                    if send_conn_btn.count() > 0:
-                                        send_conn_btn.first.click()
-                                        page.wait_for_timeout(2000)
-                            else:
-                                # If no note button, send standard connect
-                                send_conn_btn = page.locator("button:has-text('Enviar sin nota'), button:has-text('Send without note'), button:has-text('Enviar')")
-                                if send_conn_btn.count() > 0:
-                                    send_conn_btn.first.click()
-                                    page.wait_for_timeout(1500)
-                        action_type = "linkedin.connection_requested"
+                        raise RuntimeError("Solicitud de conexión bloqueada: solo se permite DM o InMail.")
 
                     # Update CRM
                     update_crm_after_linkedin(config, lead, args.template, action_type, body_rendered)
